@@ -1,0 +1,308 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Admin {
+  adminId     String  @id
+  userId      String  @unique
+  permissions String?
+  User        User    @relation(fields: [userId], references: [userId], onDelete: Cascade)
+}
+
+model AuthMethod {
+  authMethodId   String   @id
+  userId         String
+  type           AuthType
+  identifier     String
+  credentialData String?
+  isEnabled      Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  User           User     @relation(fields: [userId], references: [userId], onDelete: Cascade)
+}
+
+model Availability {
+  availabilityId String   @id
+  propertyId     String
+  startDate      DateTime @db.Date
+  endDate        DateTime @db.Date
+  isAvailable    Boolean  @default(true)
+  priceOverride  Decimal?
+  Property       Property @relation(fields: [propertyId], references: [propertyId], onDelete: Cascade)
+}
+
+model Booking {
+  bookingId       String        @id
+  propertyId      String
+  tenantId        String
+  checkInDate     DateTime      @db.Date
+  checkOutDate    DateTime      @db.Date
+  numberOfGuests  Int?
+  totalPrice      Decimal
+  status          BookingStatus @default(PENDING)
+  specialRequests String?
+  requestedAt     DateTime      @default(now())
+  respondedAt     DateTime?
+  Property        Property      @relation(fields: [propertyId], references: [propertyId])
+  Tenant          Tenant        @relation(fields: [tenantId], references: [tenantId])
+  Message         Message[]
+  Payment         Payment[]
+  Review          Review?
+}
+
+model EmailLog {
+  emailLogId String   @id
+  userId     String?
+  type       String
+  recipient  String
+  subject    String?
+  body       String?
+  status     String?
+  sentAt     DateTime @default(now())
+  User       User?    @relation(fields: [userId], references: [userId])
+}
+
+model Landlord {
+  landlordId    String     @id
+  userId        String     @unique
+  bio           String?
+  businessName  String?
+  taxId         String?
+  totalEarnings Float      @default(0.0)
+  averageRating Float      @default(0.0)
+  User          User       @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  Property      Property[]
+}
+
+model Message {
+  messageId                     String   @id
+  senderId                      String
+  receiverId                    String
+  bookingId                     String?
+  messageText                   String
+  isRead                        Boolean  @default(false)
+  sentAt                        DateTime @default(now())
+  Booking                       Booking? @relation(fields: [bookingId], references: [bookingId])
+  User_Message_receiverIdToUser User     @relation("Message_receiverIdToUser", fields: [receiverId], references: [userId])
+  User_Message_senderIdToUser   User     @relation("Message_senderIdToUser", fields: [senderId], references: [userId])
+}
+
+model Notification {
+  notificationId  String   @id
+  userId          String
+  type            String
+  title           String?
+  message         String?
+  isRead          Boolean  @default(false)
+  relatedEntityId String?
+  createdAt       DateTime @default(now())
+  User            User     @relation(fields: [userId], references: [userId])
+}
+
+model Payment {
+  paymentId       String        @id
+  bookingId       String
+  amount          Decimal
+  status          PaymentStatus @default(PENDING)
+  method          String?
+  transactionId   String?       @unique
+  processedAt     DateTime?
+  gatewayResponse String?
+  Booking         Booking       @relation(fields: [bookingId], references: [bookingId])
+}
+
+model Property {
+  propertyId      String            @id
+  landlordId      String
+  title           String
+  description     String?
+  type            PropertyType
+  address         String
+  city            String
+  state           String?
+  zipCode         String?
+  latitude        Float?
+  longitude       Float?
+  bedrooms        Int?
+  bathrooms       Int?
+  area            Float?
+  pricePerNight   Decimal
+  maxGuests       Int?
+  status          PropertyStatus    @default(DRAFT)
+  averageRating   Float             @default(0.0)
+  totalReviews    Int               @default(0)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime
+  Availability    Availability[]
+  Booking         Booking[]
+  Landlord        Landlord          @relation(fields: [landlordId], references: [landlordId], onDelete: Cascade)
+  PropertyAmenity PropertyAmenity[]
+  PropertyImage   PropertyImage[]
+  PropertyRule    PropertyRule[]
+  Review          Review[]
+  SavedProperty   SavedProperty[]
+}
+
+model PropertyAmenity {
+  amenityId   String   @id
+  propertyId  String
+  amenityName String
+  amenityType String?
+  Property    Property @relation(fields: [propertyId], references: [propertyId], onDelete: Cascade)
+}
+
+model PropertyImage {
+  imageId      String   @id
+  propertyId   String
+  imageUrl     String
+  thumbnailUrl String?
+  displayOrder Int?
+  isPrimary    Boolean  @default(false)
+  uploadedAt   DateTime @default(now())
+  Property     Property @relation(fields: [propertyId], references: [propertyId], onDelete: Cascade)
+}
+
+model PropertyRule {
+  ruleId     String   @id
+  propertyId String
+  ruleText   String
+  ruleType   String?
+  Property   Property @relation(fields: [propertyId], references: [propertyId], onDelete: Cascade)
+}
+
+model Report {
+  reportId    String     @id
+  reporterId  String
+  type        ReportType
+  targetId    String
+  reason      String?
+  description String?
+  status      String     @default("PENDING")
+  createdAt   DateTime   @default(now())
+  User        User       @relation(fields: [reporterId], references: [userId])
+}
+
+model Review {
+  reviewId   String   @id
+  propertyId String
+  tenantId   String
+  bookingId  String   @unique
+  rating     Int
+  reviewText String?
+  createdAt  DateTime @default(now())
+  Booking    Booking  @relation(fields: [bookingId], references: [bookingId])
+  Property   Property @relation(fields: [propertyId], references: [propertyId])
+  Tenant     Tenant   @relation(fields: [tenantId], references: [tenantId])
+}
+
+model SavedProperty {
+  savedPropertyId String   @id
+  tenantId        String
+  propertyId      String
+  savedAt         DateTime @default(now())
+  Property        Property @relation(fields: [propertyId], references: [propertyId])
+  Tenant          Tenant   @relation(fields: [tenantId], references: [tenantId])
+
+  @@unique([tenantId, propertyId])
+}
+
+model Tenant {
+  tenantId                 String          @id
+  userId                   String          @unique
+  bio                      String?
+  occupation               String?
+  numberOfPreviousBookings Int             @default(0)
+  averageRating            Float           @default(0.0)
+  Booking                  Booking[]
+  Review                   Review[]
+  SavedProperty            SavedProperty[]
+  User                     User            @relation(fields: [userId], references: [userId], onDelete: Cascade)
+}
+
+model User {
+  userId                           String             @id
+  supabaseAuthId                   String             @unique
+  email                            String             @unique
+  firstName                        String?
+  lastName                         String?
+  phoneNumber                      String?
+  profilePicture                   String?
+  role                             UserRole           @default(TENANT)
+  verificationStatus               VerificationStatus @default(UNVERIFIED)
+  isActive                         Boolean            @default(true)
+  isBanned                         Boolean            @default(false)
+  createdAt                        DateTime           @default(now())
+  lastLogin                        DateTime?
+  Admin                            Admin?
+  AuthMethod                       AuthMethod[]
+  EmailLog                         EmailLog[]
+  Landlord                         Landlord?
+  Message_Message_receiverIdToUser Message[]          @relation("Message_receiverIdToUser")
+  Message_Message_senderIdToUser   Message[]          @relation("Message_senderIdToUser")
+  Notification                     Notification[]
+  Report                           Report[]
+  Tenant                           Tenant?
+}
+
+enum AuthType {
+  PASSWORD
+  TWO_FACTOR
+  PASSKEY
+  GOOGLE
+  GITHUB
+}
+
+enum BookingStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum PropertyStatus {
+  DRAFT
+  PENDING_APPROVAL
+  ACTIVE
+  INACTIVE
+  REJECTED
+}
+
+enum PropertyType {
+  APARTMENT
+  HOUSE
+  CONDO
+  STUDIO
+  ROOM
+}
+
+enum ReportType {
+  PROPERTY
+  USER
+  REVIEW
+  OTHER
+}
+
+enum UserRole {
+  TENANT
+  LANDLORD
+  ADMIN
+}
+
+enum VerificationStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+}
