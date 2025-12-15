@@ -1,10 +1,3 @@
-import { Pool } from 'pg'
-import { PrismaPg } from '@prisma/adapter-pg'
-import { PrismaClient } from '../generated/prisma'
+import { PrismaClient } from '@/generated/prisma/client'
 
-const connectionString = process.env.DIRECT_URL
-
-const pool = new Pool({ connectionString })
-const adapter = new PrismaPg(pool)
-
-export const prisma = new PrismaClient({ adapter })
+export const prisma = new PrismaClient()
