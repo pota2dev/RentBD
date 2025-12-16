@@ -1,13 +1,143 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { 
-    getUserProfile, 
-    getProfileByEmail,
-    createProfile, 
-    updateTenantProfile, 
-    updateLandlordProfile 
-} from '@/service/user.service';
-import { UserRole } from '@/generated/prisma/client';
+import { UserRole, PrismaClient } from '@/generated/prisma/client';
 import { auth, currentUser } from '@clerk/nextjs/server';
+
+const prisma = new PrismaClient();
+
+// --- Service Logic (Co-located) ---
+
+const getUserProfile = async (userId: string) => {
+    return await prisma.user.findUnique({
+        where: { userId },
+        include: {
+            Tenant: true,
+            Landlord: true,
+        },
+    });
+};
+
+const getProfileByEmail = async (email: string) => {
+    return await prisma.user.findUnique({
+        where: { email },
+        include: {
+            Tenant: true,
+            Landlord: true,
+        },
+    });
+};
+
+const createProfile = async (data: {
+    userId: string;
+    email: string;
+    supabaseAuthId: string;
+    firstName?: string;
+    lastName?: string;
+    role?: UserRole;
+}) => {
+    return await prisma.user.create({
+        data: {
+            userId: data.userId,
+            email: data.email,
+            supabaseAuthId: data.supabaseAuthId,
+            firstName: data.firstName,
+            lastName: data.lastName,
+            role: data.role || UserRole.TENANT,
+            // Create the specific profile based on role
+            ...(data.role === UserRole.LANDLORD
+                ? { Landlord: { create: { landlordId: crypto.randomUUID() } } }
+                : { Tenant: { create: { tenantId: crypto.randomUUID() } } }
+            )
+        },
+        include: {
+            Tenant: true,
+            Landlord: true,
+        }
+    });
+};
+
+const updateTenantProfile = async (userId: string, data: {
+    bio?: string;
+    occupation?: string;
+    firstName?: string;
+    lastName?: string;
+    phoneNumber?: string;
+}) => {
+    // Update User common fields
+    const user = await prisma.user.update({
+        where: { userId },
+        data: {
+            firstName: data.firstName,
+            lastName: data.lastName,
+            phoneNumber: data.phoneNumber,
+            Tenant: {
+                update: {
+                    bio: data.bio,
+                    occupation: data.occupation,
+                }
+            }
+        },
+        include: {
+            Tenant: true,
+        }
+    });
+    return user;
+};
+
+const updateLandlordProfile = async (userId: string, data: {
+    bio?: string;
+    businessName?: string;
+    firstName?: string;
+    lastName?: string;
+    phoneNumber?: string;
+}) => {
+    // Update User common fields
+    const user = await prisma.user.update({
+        where: { userId },
+        data: {
+            firstName: data.firstName,
+            lastName: data.lastName,
+            phoneNumber: data.phoneNumber,
+            Landlord: {
+                update: {
+                    bio: data.bio,
+                    businessName: data.businessName,
+                }
+            }
+        },
+        include: {
+            Landlord: true,
+        }
+    });
+    return user;
+};
+
+const switchUserRole = async (userId: string, newRole: UserRole) => {
+    return await prisma.user.update({
+        where: { userId },
+        data: {
+            role: newRole,
+            ...(newRole === UserRole.LANDLORD ? {
+                Landlord: {
+                    upsert: {
+                        create: { landlordId: crypto.randomUUID() },
+                        update: {}
+                    }
+                }
+            } : {}),
+            ...(newRole === UserRole.TENANT ? {
+                Tenant: {
+                    upsert: {
+                        create: { tenantId: crypto.randomUUID() },
+                        update: {}
+                    }
+                }
+            } : {})
+        },
+        include: { Tenant: true, Landlord: true }
+    });
+};
+
+// --- Controller Logic ---
 
 // Helper to get authenticated user
 const getAuthenticatedUserId = async (): Promise<string | null> => {
@@ -113,6 +243,19 @@ export const updateProfileController = async (req: NextRequest) => {
 
         // Use the DB user ID, not the Auth ID (in case of mismatch)
         const dbUserId = existingUser.userId;
+
+        // Handle Role Switching
+        if (role && role !== existingUser.role) {
+             console.log(`Switching role from ${existingUser.role} to ${role}`);
+             if (role === UserRole.TENANT || role === UserRole.LANDLORD) {
+                 // Update role and ensure profile exists
+                 existingUser = await switchUserRole(dbUserId, role) as any;
+             }
+        }
+
+        if (!existingUser) {
+             return { error: 'User not found after role switch', status: 500 };
+        }
 
         let updatedUser;
         if (existingUser.role === UserRole.TENANT) {

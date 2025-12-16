@@ -3,6 +3,26 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ProfileData } from './model';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Loader2, User, Building, UserCircle } from "lucide-react";
 
 interface ProfileViewProps {
     initialData?: ProfileData | null;
@@ -11,8 +31,10 @@ interface ProfileViewProps {
 export default function ProfileView({ initialData }: ProfileViewProps) {
     const [profile, setProfile] = useState<ProfileData | null>(initialData || null);
     const [loading, setLoading] = useState(!initialData);
-    const [error, setError] = useState('');
     const [saving, setSaving] = useState(false);
+    
+    // Derived state for the active role tab
+    const [activeRole, setActiveRole] = useState<'TENANT' | 'LANDLORD'>('TENANT');
 
     // Form State
     const [formData, setFormData] = useState({
@@ -30,6 +52,7 @@ export default function ProfileView({ initialData }: ProfileViewProps) {
         if (initialData) {
             setProfile(initialData);
             initializeForm(initialData);
+            setActiveRole(initialData.role === 'ADMIN' ? 'TENANT' : initialData.role);
             setLoading(false);
         } else {
             fetchProfile();
@@ -41,6 +64,7 @@ export default function ProfileView({ initialData }: ProfileViewProps) {
             firstName: data.firstName || '',
             lastName: data.lastName || '',
             phoneNumber: data.phoneNumber || '',
+            // Populate bio/occupation/business based on CURRENT role in DB
             bio: data.role === 'TENANT' ? data.Tenant?.bio || '' : data.Landlord?.bio || '',
             occupation: data.Tenant?.occupation || '',
             businessName: data.Landlord?.businessName || '',
@@ -50,19 +74,14 @@ export default function ProfileView({ initialData }: ProfileViewProps) {
     const fetchProfile = async () => {
         try {
             const res = await fetch('/profile/api');
-            if (!res.ok) {
-                if (res.status === 404) {
-                    setError('Profile not found. Please contact support or try logging in again.');
-                } else {
-                    throw new Error('Failed to fetch profile');
-                }
-                return;
+            if (res.ok) {
+                const data = await res.json();
+                setProfile(data);
+                initializeForm(data);
+                setActiveRole(data.role === 'ADMIN' ? 'TENANT' : data.role);
             }
-            const data = await res.json();
-            setProfile(data);
-            initializeForm(data);
-        } catch (err: any) {
-            setError(err.message || 'An error occurred');
+        } catch (err) {
+            console.error(err);
         } finally {
             setLoading(false);
         }
@@ -73,23 +92,42 @@ export default function ProfileView({ initialData }: ProfileViewProps) {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
+    const handleRoleChange = async (newRole: string) => {
+        const role = newRole as 'TENANT' | 'LANDLORD';
+        setActiveRole(role);
+        
+        // When switching tabs, we update the bio/other fields in local state to match what we have in cache for that role
+        // Ideally we should keep separate state for tenant vs landlord fields, but for simplicity we can just
+        // rely on what's in 'profile' object if we haven't dirtied the form yet? 
+        // Or better: keep the common fields, and swap the role-specific ones.
+        
+        if (profile) {
+            setFormData(prev => ({
+                ...prev,
+                bio: role === 'TENANT' ? profile.Tenant?.bio || '' : profile.Landlord?.bio || '',
+                // occupation/businessName are specific, keep them as is or reset?
+                // we keep them in state to allow editing.
+            }));
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setSaving(true);
-        setError('');
 
         try {
             const res = await fetch('/profile/api', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    role: profile?.role, // Pass role back to help controller decide (optional)
+                    role: activeRole, // Send the tab's role
                     firstName: formData.firstName,
                     lastName: formData.lastName,
                     phoneNumber: formData.phoneNumber,
+                    // Send specific fields
                     bio: formData.bio,
-                    occupation: formData.occupation,
-                    businessName: formData.businessName,
+                    occupation: activeRole === 'TENANT' ? formData.occupation : undefined,
+                    businessName: activeRole === 'LANDLORD' ? formData.businessName : undefined,
                 }),
             });
 
@@ -97,110 +135,190 @@ export default function ProfileView({ initialData }: ProfileViewProps) {
 
             const updated = await res.json();
             setProfile(updated);
-            alert('Profile updated successfully!');
-            router.refresh(); // Refresh server component
+            initializeForm(updated); // Sync form with validated data
+            router.refresh();
         } catch (err: any) {
-            setError(err.message || 'Failed to save');
+            console.error(err);
+            alert('Failed to save profile');
         } finally {
             setSaving(false);
         }
     };
 
-    if (loading) return <div className="p-8 text-center">Loading profile...</div>;
-    if (error) return <div className="p-8 text-center text-red-500">{error}</div>;
-    if (!profile) return <div className="p-8 text-center">No profile found.</div>;
+    if (loading) {
+        return (
+            <div className="flex h-[50vh] items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+            </div>
+        );
+    }
 
-    const isTenant = profile.role === 'TENANT';
-    const isLandlord = profile.role === 'LANDLORD';
+    if (!profile) return <div className="p-8 text-center text-red-500">Failed to load profile.</div>;
+
+    const userInitials = `${profile.firstName?.[0] || ''}${profile.lastName?.[0] || ''}`.toUpperCase();
 
     return (
-        <div className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-md mt-10">
-            <h1 className="text-2xl font-bold mb-6 text-gray-800">
-                Your Profile ({profile.role})
-            </h1>
+        <div className="container max-w-4xl py-10 mx-auto">
+            <h1 className="text-3xl font-bold mb-8">Profile Settings</h1>
+            
+            <div className="grid gap-6 md:grid-cols-[250px_1fr]">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Your Account</CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex flex-col items-center text-center space-y-4">
+                        <Avatar className="h-24 w-24">
+                            <AvatarImage src="" /> {/* Add profile picture support later */}
+                            <AvatarFallback className="text-xl bg-primary/10 text-primary">{userInitials}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                            <p className="font-medium">{profile.firstName} {profile.lastName}</p>
+                            <p className="text-sm text-muted-foreground">{profile.email}</p>
+                            <div className="mt-2 inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80">
+                                {activeRole}
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">First Name</label>
-                        <input
-                            type="text"
-                            name="firstName"
-                            value={formData.firstName}
-                            onChange={handleChange}
-                            className="mt-1 block w-full border border-gray-300 rounded-md p-2"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">Last Name</label>
-                        <input
-                            type="text"
-                            name="lastName"
-                            value={formData.lastName}
-                            onChange={handleChange}
-                            className="mt-1 block w-full border border-gray-300 rounded-md p-2"
-                        />
-                    </div>
-                </div>
+                <form onSubmit={handleSubmit}>
+                    <Tabs value={activeRole} onValueChange={handleRoleChange} className="w-full">
+                        <TabsList className="grid w-full grid-cols-2 mb-6">
+                            <TabsTrigger value="TENANT" className="flex items-center gap-2">
+                                <User className="h-4 w-4" />
+                                Tenant Profile
+                            </TabsTrigger>
+                            <TabsTrigger value="LANDLORD" className="flex items-center gap-2">
+                                <Building className="h-4 w-4" />
+                                Landlord Profile
+                            </TabsTrigger>
+                        </TabsList>
 
-                <div>
-                    <label className="block text-sm font-medium text-gray-700">Phone Number</label>
-                    <input
-                        type="tel"
-                        name="phoneNumber"
-                        value={formData.phoneNumber}
-                        onChange={handleChange}
-                        className="mt-1 block w-full border border-gray-300 rounded-md p-2"
-                    />
-                </div>
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Personal Information</CardTitle>
+                                <CardDescription>
+                                    Manage your personal details and contact information.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="firstName">First Name</Label>
+                                        <Input
+                                            id="firstName"
+                                            name="firstName"
+                                            value={formData.firstName}
+                                            onChange={handleChange}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="lastName">Last Name</Label>
+                                        <Input
+                                            id="lastName"
+                                            name="lastName"
+                                            value={formData.lastName}
+                                            onChange={handleChange}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="phoneNumber">Phone Number</Label>
+                                    <Input
+                                        id="phoneNumber"
+                                        name="phoneNumber"
+                                        type="tel"
+                                        value={formData.phoneNumber}
+                                        onChange={handleChange}
+                                    />
+                                </div>
+                            </CardContent>
+                        </Card>
 
-                <div>
-                    <label className="block text-sm font-medium text-gray-700">Bio</label>
-                    <textarea
-                        name="bio"
-                        rows={3}
-                        value={formData.bio}
-                        onChange={handleChange}
-                        className="mt-1 block w-full border border-gray-300 rounded-md p-2"
-                    />
-                </div>
+                        <div className="mt-6">
+                            <TabsContent value="TENANT">
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>Tenant Details</CardTitle>
+                                        <CardDescription>
+                                            Information shared with landlords when you book properties.
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="space-y-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="occupation">Occupation</Label>
+                                            <Input
+                                                id="occupation"
+                                                name="occupation"
+                                                value={formData.occupation}
+                                                onChange={handleChange}
+                                                placeholder="e.g. Software Engineer"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="bio">Bio</Label>
+                                            <Textarea
+                                                id="bio"
+                                                name="bio"
+                                                value={formData.bio}
+                                                onChange={handleChange}
+                                                placeholder="Tell landlords a bit about yourself..."
+                                                rows={4}
+                                            />
+                                        </div>
+                                    </CardContent>
+                                    <CardFooter className="flex justify-end">
+                                         <Button type="submit" disabled={saving}>
+                                            {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                            Save Tenant Profile
+                                        </Button>
+                                    </CardFooter>
+                                </Card>
+                            </TabsContent>
 
-                {isTenant && (
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">Occupation</label>
-                        <input
-                            type="text"
-                            name="occupation"
-                            value={formData.occupation}
-                            onChange={handleChange}
-                            className="mt-1 block w-full border border-gray-300 rounded-md p-2"
-                        />
-                    </div>
-                )}
-
-                {isLandlord && (
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">Business Name</label>
-                        <input
-                            type="text"
-                            name="businessName"
-                            value={formData.businessName}
-                            onChange={handleChange}
-                            className="mt-1 block w-full border border-gray-300 rounded-md p-2"
-                        />
-                    </div>
-                )}
-
-                <div className="flex justify-end">
-                    <button
-                        type="submit"
-                        disabled={saving}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-                    >
-                        {saving ? 'Saving...' : 'Save Changes'}
-                    </button>
-                </div>
-            </form>
+                            <TabsContent value="LANDLORD">
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>Landlord Details</CardTitle>
+                                        <CardDescription>
+                                            Information shown to potential tenants on your property listings.
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="space-y-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="businessName">Business Name (Optional)</Label>
+                                            <Input
+                                                id="businessName"
+                                                name="businessName"
+                                                value={formData.businessName}
+                                                onChange={handleChange}
+                                                placeholder="e.g. Dream Stays LLC"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="bio">Bio</Label>
+                                            <Textarea
+                                                id="bio" // Same ID/name as tenant bio, but handled by conditional rendering
+                                                name="bio"
+                                                value={formData.bio}
+                                                onChange={handleChange}
+                                                placeholder="Describe your hosting style or business..."
+                                                rows={4}
+                                            />
+                                        </div>
+                                    </CardContent>
+                                    <CardFooter className="flex justify-end">
+                                        <Button type="submit" disabled={saving}>
+                                            {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                            Save Landlord Profile
+                                        </Button>
+                                    </CardFooter>
+                                </Card>
+                            </TabsContent>
+                        </div>
+                    </Tabs>
+                </form>
+            </div>
         </div>
     );
 }
