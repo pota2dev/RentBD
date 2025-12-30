@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getPropertyReviews, checkReviewEligibility, createReview } from "../controller";
+import { getPropertyReviews, checkReviewEligibility, createReview } from "../model";
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;

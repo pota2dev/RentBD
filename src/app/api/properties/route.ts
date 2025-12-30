@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@/generated/prisma/client';
+import { prisma } from '@/lib/prisma';
+import { getProfileController } from '../../profile/model';
 import { auth } from '@clerk/nextjs/server';
-
-const prisma = new PrismaClient();
 
 // Helper to get Landlord ID
 async function getLandlordId(userId: string) {
@@ -83,16 +82,36 @@ export async function POST(req: NextRequest) {
                 title: data.title,
                 description: data.description,
                 type: data.type,
-                address: data.address,
+                address: data.address, // or shortAddress?
                 city: data.city,
                 state: data.state,
                 zipCode: data.zipCode,
-                pricePerNight: data.pricePerNight,
+                
+                // New Fields
+                division: data.division,
+                district: data.district,
+                thana: data.thana,
+                subArea: data.subArea,
+                shortAddress: data.shortAddress,
+                
+                utilitiesIncluded: data.utilitiesIncluded,
+                
                 bedrooms: data.bedrooms,
                 bathrooms: data.bathrooms,
+                balcony: data.balcony,
+                floorNo: data.floorNo,
+                
                 maxGuests: data.maxGuests,
-                status: 'DRAFT', // Default to active or draft? Let's say DRAFT or PENDING_APPROVAL based on schema. Schema default is DRAFT.
+                status: 'DRAFT',
                 updatedAt: new Date(),
+                PropertyImage: {
+                    create: data.images?.map((url: string, index: number) => ({
+                        imageId: crypto.randomUUID(),
+                        imageUrl: url,
+                        displayOrder: index,
+                        isPrimary: index === 0
+                    }))
+                }
             }
         });
 
@@ -105,13 +124,15 @@ export async function POST(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
     try {
-        const { userId } = await auth();
-        if (!userId) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        const { data: user, error, status } = await getProfileController();
+        if (error || !user) {
+             return NextResponse.json({ error: error || 'Unauthorized' }, { status: status || 401 });
         }
+        const userData = user as any;
+        const userId = userData.userId; 
 
         const data = await req.json();
-        const { propertyId, ...updates } = data;
+        const { propertyId, images, ...updates } = data;
 
         if (!propertyId) {
             return NextResponse.json({ error: 'Property ID required' }, { status: 400 });
@@ -130,10 +151,33 @@ export async function PUT(req: NextRequest) {
         if (property.Landlord.userId !== userId) {
              return NextResponse.json({ error: 'Unauthorized to edit this property' }, { status: 403 });
         }
+        
+        // Handle Images: Sync strategy (Delete all, re-create)
+        // This ensures what is on the client (ordering, existence) matches the server.
+        if (images && Array.isArray(images)) {
+            // Delete existing images
+            await prisma.propertyImage.deleteMany({
+                where: { propertyId }
+            });
+
+            // Create new images from the list
+            if (images.length > 0) {
+                await prisma.propertyImage.createMany({
+                    data: images.map((url: string, index: number) => ({
+                        imageId: crypto.randomUUID(),
+                        imageUrl: url,
+                        propertyId: propertyId,
+                        displayOrder: index,
+                        isPrimary: index === 0
+                    }))
+                });
+            }
+        }
 
         const updated = await prisma.property.update({
             where: { propertyId },
             data: {
+                updatedAt: new Date(),
                 title: updates.title,
                 description: updates.description,
                 type: updates.type,
@@ -141,11 +185,22 @@ export async function PUT(req: NextRequest) {
                 city: updates.city,
                 state: updates.state,
                 zipCode: updates.zipCode,
-                pricePerNight: updates.pricePerNight,
+                
+                division: updates.division,
+                district: updates.district,
+                thana: updates.thana,
+                subArea: updates.subArea,
+                shortAddress: updates.shortAddress,
+                
+                utilitiesIncluded: updates.utilitiesIncluded,
+                
                 bedrooms: updates.bedrooms,
                 bathrooms: updates.bathrooms,
+                balcony: updates.balcony,
+                floorNo: updates.floorNo,
+                area: updates.area, // New field in schema
+                
                 maxGuests: updates.maxGuests,
-                updatedAt: new Date(),
             }
         });
 

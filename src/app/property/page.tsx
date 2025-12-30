@@ -1,5 +1,5 @@
 
-import { getPropertyById } from './controller';
+import { getPropertyById } from './model';
 import PropertyView from './view';
 
 interface PageProps {
@@ -31,7 +31,23 @@ export default async function PropertyPage(props: PageProps) {
     );
   }
 
+  const prop = property as any;
+  const serializedProperty = {
+    ...prop,
+    pricePerMonth: prop.pricePerMonth ? Number(prop.pricePerMonth) : null,
+    pricePerNight: prop.pricePerNight ? Number(prop.pricePerNight) : null,
+    area: prop.area || 0,
+    Availability: prop.Availability?.map((a: any) => ({
+        ...a,
+        priceOverride: a.priceOverride ? Number(a.priceOverride) : null
+    })),
+    Booking: prop.Booking?.map((b: any) => ({
+      ...b,
+      totalPrice: Number(b.totalPrice)
+    }))
+  };
+
   return (
-    <PropertyView property={property} />
+    <PropertyView property={serializedProperty} />
   );
 }

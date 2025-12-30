@@ -26,6 +26,7 @@ import {
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useRouter } from 'next/navigation';
 
+    // Updated Interface
 interface Property {
     propertyId: string;
     title: string;
@@ -35,10 +36,26 @@ interface Property {
     city: string;
     state: string | null;
     zipCode: string | null;
-    pricePerNight: any; // Decimal needs handling
+    
+    // Legacy/Short-term
+    maxGuests: number | null; 
+    
+    // New
+    pricePerMonth: any;
+    balcony: number | null;
+    floorNo: number | null;
+    utilitiesIncluded: string | null;
+    division: string | null;
+    district: string | null;
+    thana: string | null;
+    subArea: string | null;
+    shortAddress: string | null;
+    
     bedrooms: number | null;
     bathrooms: number | null;
-    maxGuests: number | null;
+    area: number | null;
+    // Images
+    PropertyImage?: { imageUrl: string }[];
 }
 
 interface ViewProps {
@@ -49,7 +66,6 @@ export default function ManagePropertiesView({ properties }: ViewProps) {
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [editingProperty, setEditingProperty] = useState<Property | null>(null);
     const router = useRouter();
-    const [deletingId, setDeletingId] = useState<string | null>(null);
 
     const handleCreateSuccess = () => {
         setIsCreateOpen(false);
@@ -96,12 +112,6 @@ export default function ManagePropertiesView({ properties }: ViewProps) {
                             <DialogTitle>List New Property</DialogTitle>
                             <DialogDescription className="sr-only">Fill in the details to list your new property.</DialogDescription>
                         </DialogHeader>
-                        {/* Form's header is hidden conditionally or we just accept double header? 
-                            Let's keep form header for now as it's a Card. 
-                            Actually, to be clean, let's just make the DialogTitle accessible but perhaps hidden if the form has one.
-                            But standard accessible pattern: Dialog has visible title.
-                            If I use sr-only for DialogTitle, readers get it.
-                        */}
                         <PropertyForm onSuccess={handleCreateSuccess} mode="create" />
                     </DialogContent>
                 </Dialog>
@@ -120,16 +130,21 @@ export default function ManagePropertiesView({ properties }: ViewProps) {
                         <Card key={property.propertyId} className="flex flex-col">
                             <CardHeader>
                                 <CardTitle className="truncate" title={property.title}>{property.title}</CardTitle>
-                                <CardDescription className="truncate">{property.city}, {property.state}</CardDescription>
+                                <CardDescription className="truncate">
+                                    {property.thana ? `${property.thana}, ${property.district}` : `${property.city}, ${property.state}`}
+                                </CardDescription>
                             </CardHeader>
                             <CardContent className="flex-grow">
                                 <div className="text-sm space-y-2 text-gray-600">
                                     <p><span className="font-semibold">Type:</span> {property.type}</p>
-                                    <p><span className="font-semibold">Price:</span> ${Number(property.pricePerNight)} / night</p>
-                                    <p><span className="font-semibold">Details:</span> {property.bedrooms} Bed, {property.bathrooms} Bath, {property.maxGuests} Guests</p>
+                                    <p><span className="font-semibold">Price:</span> {property.pricePerMonth ? `${Number(property.pricePerMonth).toLocaleString()} BDT / month` : `N/A`}</p>
+                                    <p><span className="font-semibold">Details:</span> {property.bedrooms} Bed, {property.bathrooms} Bath</p>
                                 </div>
                             </CardContent>
                             <CardFooter className="flex justify-end gap-2 border-t pt-4">
+                                <Button variant="outline" size="sm" onClick={() => router.push(`/property?id=${property.propertyId}`)}>
+                                     View
+                                </Button>
                                 <Dialog open={!!editingProperty && editingProperty.propertyId === property.propertyId} onOpenChange={(open) => !open && setEditingProperty(null)}>
                                     <DialogTrigger asChild>
                                         <Button variant="outline" size="sm" onClick={() => setEditingProperty(property)}>
@@ -145,13 +160,24 @@ export default function ManagePropertiesView({ properties }: ViewProps) {
                                             initialData={{
                                                 ...property,
                                                 description: property.description || '',
-                                                type: property.type, // Enum cast might be needed if TS complains
+                                                type: property.type,
                                                 state: property.state || '',
                                                 zipCode: property.zipCode || '',
-                                                pricePerNight: Number(property.pricePerNight),
                                                 bedrooms: property.bedrooms || 1,
                                                 bathrooms: property.bathrooms || 1,
-                                                maxGuests: property.maxGuests || 1,
+                                                area: property.area || 0,
+                                                maxGuests: property.maxGuests || 0,
+                                                // New Mappings
+                                                pricePerMonth: Number(property.pricePerMonth || 0),
+                                                balcony: property.balcony || 0,
+                                                floorNo: property.floorNo || 1,
+                                                utilitiesIncluded: property.utilitiesIncluded || '',
+                                                division: property.division || '',
+                                                district: property.district || '',
+                                                thana: property.thana || '',
+                                                subArea: property.subArea || '',
+                                                shortAddress: property.shortAddress || '',
+                                                images: property.PropertyImage?.map(img => img.imageUrl) || [],
                                             }} 
                                             onSuccess={handleUpdateSuccess} 
                                             mode="edit" 
@@ -161,6 +187,7 @@ export default function ManagePropertiesView({ properties }: ViewProps) {
 
                                 <AlertDialog>
                                     <AlertDialogTrigger asChild>
+
                                         <Button variant="destructive" size="sm">
                                             <Trash2 className="h-4 w-4 mr-1" /> Delete
                                         </Button>

@@ -51,7 +51,6 @@ async function main() {
       address: '123 Coastal Highway',
       city: 'Cox\'s Bazar',
       state: 'Chittagong',
-      pricePerNight: 150.00,
       bedrooms: 2,
       bathrooms: 2,
       maxGuests: 4,
