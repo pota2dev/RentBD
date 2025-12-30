@@ -2,6 +2,8 @@ import { getOwnedProperties } from './model';
 import ManagePropertiesView from './view';
 import { redirect } from 'next/navigation';
 
+export const dynamic = 'force-dynamic';
+
 export default async function ManagePropertiesPage() {
     const { data, error, status } = await getOwnedProperties();
 

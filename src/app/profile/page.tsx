@@ -2,6 +2,8 @@
 import {ProfileData, getProfileController } from './model';
 import ProfileView from './view';
 
+export const dynamic = 'force-dynamic';
+
 export default async function ProfilePage() {
     const { data, error } = await getProfileController();
 
