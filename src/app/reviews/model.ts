@@ -1,4 +1,4 @@
-import { Review } from "@/generated/prisma/client";
+import { Review } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 /**
