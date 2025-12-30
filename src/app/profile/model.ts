@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { UserRole, PrismaClient } from '@/generated/prisma/client';
+import { UserRole, PrismaClient } from '@prisma/client';
 import { auth, currentUser } from '@clerk/nextjs/server';
 
 import { prisma } from '@/lib/prisma';
