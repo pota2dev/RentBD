@@ -5,7 +5,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DIRECT_URL")
+  url      = env("DATABASE_URL")
 }
 
 model Admin {
@@ -117,35 +117,43 @@ model Payment {
 }
 
 model Property {
-  propertyId      String            @id
-  landlordId      String
-  title           String
-  description     String?
-  type            PropertyType
-  address         String
-  city            String
-  state           String?
-  zipCode         String?
-  latitude        Float?
-  longitude       Float?
-  bedrooms        Int?
-  bathrooms       Int?
-  area            Float?
-  pricePerNight   Decimal
-  maxGuests       Int?
-  status          PropertyStatus    @default(DRAFT)
-  averageRating   Float             @default(0.0)
-  totalReviews    Int               @default(0)
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime
-  Availability    Availability[]
-  Booking         Booking[]
-  Landlord        Landlord          @relation(fields: [landlordId], references: [landlordId], onDelete: Cascade)
-  PropertyAmenity PropertyAmenity[]
-  PropertyImage   PropertyImage[]
-  PropertyRule    PropertyRule[]
-  Review          Review[]
-  SavedProperty   SavedProperty[]
+  propertyId        String            @id
+  landlordId        String
+  title             String
+  description       String?
+  type              PropertyType
+  address           String
+  city              String
+  state             String?
+  zipCode           String?
+  latitude          Float?
+  longitude         Float?
+  bedrooms          Int?
+  bathrooms         Int?
+  area              Float?
+  pricePerMonth     Decimal?
+  maxGuests         Int?
+  status            PropertyStatus    @default(DRAFT)
+  averageRating     Float             @default(0.0)
+  totalReviews      Int               @default(0)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime
+  balcony           Int               @default(0)
+  district          String?
+  division          String?
+  floorNo           Int?
+  shortAddress      String?
+  subArea           String?
+  thana             String?
+  utilitiesIncluded String?
+  Availability      Availability[]
+  Booking           Booking[]
+  Landlord          Landlord          @relation(fields: [landlordId], references: [landlordId], onDelete: Cascade)
+  PropertyAmenity   PropertyAmenity[]
+  PropertyImage     PropertyImage[]
+  PropertyRule      PropertyRule[]
+  Review            Review[]
+  SavedProperty     SavedProperty[]
 }
 
 model PropertyAmenity {

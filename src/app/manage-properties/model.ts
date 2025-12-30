@@ -1,7 +1,5 @@
-import { PrismaClient } from '@/generated/prisma/client';
+import { prisma } from '@/lib/prisma';
 import { getProfileController } from '../profile/model';
-
-const prisma = new PrismaClient();
 
 export async function getOwnedProperties() {
     try {

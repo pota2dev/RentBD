@@ -219,13 +219,21 @@ export const PropertyScalarFieldEnum = {
   bedrooms: 'bedrooms',
   bathrooms: 'bathrooms',
   area: 'area',
-  pricePerNight: 'pricePerNight',
+  pricePerMonth: 'pricePerMonth',
   maxGuests: 'maxGuests',
   status: 'status',
   averageRating: 'averageRating',
   totalReviews: 'totalReviews',
   createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
+  updatedAt: 'updatedAt',
+  balcony: 'balcony',
+  district: 'district',
+  division: 'division',
+  floorNo: 'floorNo',
+  shortAddress: 'shortAddress',
+  subArea: 'subArea',
+  thana: 'thana',
+  utilitiesIncluded: 'utilitiesIncluded'
 } as const
 
 export type PropertyScalarFieldEnum = (typeof PropertyScalarFieldEnum)[keyof typeof PropertyScalarFieldEnum]

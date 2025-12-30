@@ -1,4 +1,4 @@
-import { getPropertyReviews } from "./controller";
+import { getPropertyReviews } from "./model";
 import ReviewsView from "./view";
 
 interface PageProps {

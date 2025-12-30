@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { UserRole, PrismaClient } from '@/generated/prisma/client';
 import { auth, currentUser } from '@clerk/nextjs/server';
 
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma';
 
 
 export interface ProfileData {
