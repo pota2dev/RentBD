@@ -49,6 +49,22 @@ export default function ProfileView({ initialData }: ProfileViewProps) {
     const router = useRouter();
 
     useEffect(() => {
+        const fetchProfile = async () => {
+            try {
+                const res = await fetch('/profile/api');
+                if (res.ok) {
+                    const data = await res.json();
+                    setProfile(data);
+                    initializeForm(data);
+                    setActiveRole(data.role === 'ADMIN' ? 'TENANT' : data.role);
+                }
+            } catch (err) {
+                console.error(err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
         if (initialData) {
             setProfile(initialData);
             initializeForm(initialData);
@@ -71,21 +87,7 @@ export default function ProfileView({ initialData }: ProfileViewProps) {
         });
     };
 
-    const fetchProfile = async () => {
-        try {
-            const res = await fetch('/profile/api');
-            if (res.ok) {
-                const data = await res.json();
-                setProfile(data);
-                initializeForm(data);
-                setActiveRole(data.role === 'ADMIN' ? 'TENANT' : data.role);
-            }
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setLoading(false);
-        }
-    };
+
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -137,7 +139,7 @@ export default function ProfileView({ initialData }: ProfileViewProps) {
             setProfile(updated);
             initializeForm(updated); // Sync form with validated data
             router.refresh();
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error(err);
             alert('Failed to save profile');
         } finally {

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getProfileController, updateProfileController } from '../controller';
+import { getProfileController, updateProfileController } from '../model';
 
 export async function GET(req: NextRequest) {
     const { data, error, status } = await getProfileController();
