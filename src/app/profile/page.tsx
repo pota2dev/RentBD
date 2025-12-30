@@ -1,7 +1,6 @@
 
-import { getProfileController } from './controller';
+import {ProfileData, getProfileController } from './model';
 import ProfileView from './view';
-import { ProfileData } from './model';
 
 export default async function ProfilePage() {
     const { data, error } = await getProfileController();
