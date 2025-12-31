@@ -19,7 +19,7 @@ import { Loader2 } from "lucide-react";
 import { createClient } from '@/lib/supabase';
 
 interface PropertyData {
-    propertyId?: string;
+    id?: string;
     title: string;
     description: string;
     type: 'APARTMENT' | 'HOUSE' | 'CONDO' | 'STUDIO' | 'ROOM';
@@ -434,7 +434,7 @@ export default function PropertyForm({ initialData, onSuccess, mode = 'create' }
 
 // Update types
 interface PropertyData {
-    propertyId?: string;
+    id?: string;
     title: string;
     description: string;
     type: 'APARTMENT' | 'HOUSE' | 'CONDO' | 'STUDIO' | 'ROOM';

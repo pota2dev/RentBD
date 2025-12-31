@@ -1,59 +1,47 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { getProfileController } from '../../profile/model';
 import { auth } from '@clerk/nextjs/server';
-
-// Helper to get Landlord ID
-async function getLandlordId(userId: string) {
-    const user = await prisma.user.findUnique({
-        where: { userId },
-        include: { Landlord: true },
-    });
-    return user?.Landlord?.landlordId;
-}
+import { 
+    createProperty, 
+    updateProperty, 
+    deleteProperty, 
+    getOwnedProperties,
+    getLandlordId
+} from '../../manage-properties/model';
+import { prisma } from '@/lib/prisma'; // Still needed for the default GET generic listing if not owner mode
 
 export async function GET(req: NextRequest) {
     try {
         const { userId } = await auth();
-        if (!userId) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
+        // Allow public access for listing? If so, remove strict auth check for default mode.
+        // But for 'owner' mode, auth is required.
+        
         const { searchParams } = new URL(req.url);
         const ownerMode = searchParams.get('mode') === 'owner';
 
         if (ownerMode) {
-             const landlordId = await getLandlordId(userId);
-             if (!landlordId) {
-                 return NextResponse.json({ error: 'User is not a landlord' }, { status: 403 });
+             if (!userId) {
+                return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
              }
-
-             const properties = await prisma.property.findMany({
-                 where: { landlordId },
-                 orderBy: { createdAt: 'desc' }
-             });
-             return NextResponse.json(properties);
+             const { data, error, status } = await getOwnedProperties();
+             if (error) {
+                 return NextResponse.json({ error }, { status });
+             }
+             return NextResponse.json(data, { status });
         }
 
-        // Default: List all active properties (for browsing) // Or maybe just owner's depending on requirement
-        // The user request said "Create a route that will display the propeties the user owns".
-        // So this API needs to support that.
-        // I will default to returning owner properties if no params provided?
-        // Let's stick to explicit 'mode=owner' for safety, or check logic.
+        // Default: List all active properties (for browsing)
+        // Ideally this should be in src/app/property/model.ts as getAllProperties()
+        // For now, keeping it here is fine as it's a general query.
         
-        // Actually for this task, we mainly need the 'owner' list.
-        // Let's implement generic get if needed later, but focusing on user request:
-        
-        const landlordId = await getLandlordId(userId);
-        if (landlordId) {
-             const properties = await prisma.property.findMany({
-                 where: { landlordId },
-                 orderBy: { createdAt: 'desc' }
-             });
-             return NextResponse.json(properties);
-        } else {
-            return NextResponse.json([]); // Return empty if not landlord
-        }
+        const properties = await prisma.property.findMany({
+            orderBy: { createdAt: 'desc' },
+            include: {
+                PropertyImage: {
+                    where: { isPrimary: true }
+                }
+            }
+        });
+        return NextResponse.json(properties);
 
     } catch (error) {
         console.error('Error fetching properties:', error);
@@ -68,54 +56,14 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const landlordId = await getLandlordId(userId);
-        if (!landlordId) {
-             return NextResponse.json({ error: 'You must be a landlord to list properties. Please update your profile.' }, { status: 403 });
+        const data = await req.json();
+        const { data: property, error, status } = await createProperty(data, userId);
+
+        if (error) {
+            return NextResponse.json({ error }, { status });
         }
 
-        const data = await req.json();
-
-        const property = await prisma.property.create({
-            data: {
-                propertyId: crypto.randomUUID(),
-                landlordId,
-                title: data.title,
-                description: data.description,
-                type: data.type,
-                address: data.address, // or shortAddress?
-                city: data.city,
-                state: data.state,
-                zipCode: data.zipCode,
-                
-                // New Fields
-                division: data.division,
-                district: data.district,
-                thana: data.thana,
-                subArea: data.subArea,
-                shortAddress: data.shortAddress,
-                
-                utilitiesIncluded: data.utilitiesIncluded,
-                
-                bedrooms: data.bedrooms,
-                bathrooms: data.bathrooms,
-                balcony: data.balcony,
-                floorNo: data.floorNo,
-                
-                maxGuests: data.maxGuests,
-                status: 'DRAFT',
-                updatedAt: new Date(),
-                PropertyImage: {
-                    create: data.images?.map((url: string, index: number) => ({
-                        imageId: crypto.randomUUID(),
-                        imageUrl: url,
-                        displayOrder: index,
-                        isPrimary: index === 0
-                    }))
-                }
-            }
-        });
-
-        return NextResponse.json(property, { status: 201 });
+        return NextResponse.json(property, { status });
     } catch (error) {
         console.error('Error creating property:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
@@ -124,87 +72,25 @@ export async function POST(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
     try {
-        const { data: user, error, status } = await getProfileController();
-        if (error || !user) {
-             return NextResponse.json({ error: error || 'Unauthorized' }, { status: status || 401 });
+        const { userId } = await auth();
+        if (!userId) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
-        const userData = user as any;
-        const userId = userData.userId; 
 
         const data = await req.json();
-        const { propertyId, images, ...updates } = data;
-
-        if (!propertyId) {
+        const { id } = data;
+        
+        if (!id) {
             return NextResponse.json({ error: 'Property ID required' }, { status: 400 });
         }
-
-        // Verify ownership
-        const property = await prisma.property.findUnique({
-            where: { propertyId },
-            include: { Landlord: true }
-        });
-
-        if (!property) {
-            return NextResponse.json({ error: 'Property not found' }, { status: 404 });
-        }
-
-        if (property.Landlord.userId !== userId) {
-             return NextResponse.json({ error: 'Unauthorized to edit this property' }, { status: 403 });
-        }
         
-        // Handle Images: Sync strategy (Delete all, re-create)
-        // This ensures what is on the client (ordering, existence) matches the server.
-        if (images && Array.isArray(images)) {
-            // Delete existing images
-            await prisma.propertyImage.deleteMany({
-                where: { propertyId }
-            });
+        const { data: updated, error, status } = await updateProperty(id, data, userId);
 
-            // Create new images from the list
-            if (images.length > 0) {
-                await prisma.propertyImage.createMany({
-                    data: images.map((url: string, index: number) => ({
-                        imageId: crypto.randomUUID(),
-                        imageUrl: url,
-                        propertyId: propertyId,
-                        displayOrder: index,
-                        isPrimary: index === 0
-                    }))
-                });
-            }
+        if (error) {
+            return NextResponse.json({ error }, { status });
         }
 
-        const updated = await prisma.property.update({
-            where: { propertyId },
-            data: {
-                updatedAt: new Date(),
-                title: updates.title,
-                description: updates.description,
-                type: updates.type,
-                address: updates.address,
-                city: updates.city,
-                state: updates.state,
-                zipCode: updates.zipCode,
-                
-                division: updates.division,
-                district: updates.district,
-                thana: updates.thana,
-                subArea: updates.subArea,
-                shortAddress: updates.shortAddress,
-                
-                utilitiesIncluded: updates.utilitiesIncluded,
-                
-                bedrooms: updates.bedrooms,
-                bathrooms: updates.bathrooms,
-                balcony: updates.balcony,
-                floorNo: updates.floorNo,
-                area: updates.area, // New field in schema
-                
-                maxGuests: updates.maxGuests,
-            }
-        });
-
-        return NextResponse.json(updated);
+        return NextResponse.json(updated, { status });
     } catch (error) {
         console.error('Error updating property:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
@@ -225,27 +111,13 @@ export async function DELETE(req: NextRequest) {
             return NextResponse.json({ error: 'Property ID required' }, { status: 400 });
         }
 
-        // Verify ownership
-        const property = await prisma.property.findUnique({
-             where: { propertyId },
-             include: { Landlord: true }
-        });
+        const { success, error, status } = await deleteProperty(propertyId, userId);
 
-        if (!property) {
-             return NextResponse.json({ error: 'Property not found' }, { status: 404 });
+        if (error) {
+            return NextResponse.json({ error }, { status });
         }
 
-        if (property.Landlord.userId !== userId) {
-             return NextResponse.json({ error: 'Unauthorized to delete this property' }, { status: 403 });
-        }
-
-        // Hard delete or soft delete? Schema has CASCADE onDelete for relations usually.
-        // User asked to "Delete a property".
-        await prisma.property.delete({
-            where: { propertyId }
-        });
-
-        return NextResponse.json({ success: true });
+        return NextResponse.json({ success }, { status });
     } catch (error) {
         console.error('Error deleting property:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
