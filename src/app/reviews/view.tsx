@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Star } from "lucide-react";
 
 interface Review {
-  reviewId: string;
+  id: string;
   rating: number;
   reviewText: string | null;
   createdAt: Date | string;
@@ -203,7 +203,7 @@ export default function ReviewsView({ propertyId, initialReviews, currentUserId 
             ) : (
                 <div className="space-y-6">
                     {reviews.map((review) => (
-                        <div key={review.reviewId} className="space-y-4">
+                        <div key={review.id} className="space-y-4">
                             <div className="flex items-start justify-between">
                                 <div className="flex gap-4">
                                     <Avatar>

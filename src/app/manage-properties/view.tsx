@@ -28,7 +28,7 @@ import { useRouter } from 'next/navigation';
 
     // Updated Interface
 interface Property {
-    propertyId: string;
+    id: string;
     title: string;
     description: string | null;
     type: any;
@@ -127,7 +127,7 @@ export default function ManagePropertiesView({ properties }: ViewProps) {
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {properties.map((property) => (
-                        <Card key={property.propertyId} className="flex flex-col">
+                        <Card key={property.id} className="flex flex-col">
                             <CardHeader>
                                 <CardTitle className="truncate" title={property.title}>{property.title}</CardTitle>
                                 <CardDescription className="truncate">
@@ -142,10 +142,10 @@ export default function ManagePropertiesView({ properties }: ViewProps) {
                                 </div>
                             </CardContent>
                             <CardFooter className="flex justify-end gap-2 border-t pt-4">
-                                <Button variant="outline" size="sm" onClick={() => router.push(`/property?id=${property.propertyId}`)}>
+                                <Button variant="outline" size="sm" onClick={() => router.push(`/property?id=${property.id}`)}>
                                      View
                                 </Button>
-                                <Dialog open={!!editingProperty && editingProperty.propertyId === property.propertyId} onOpenChange={(open) => !open && setEditingProperty(null)}>
+                                <Dialog open={!!editingProperty && editingProperty.id === property.id} onOpenChange={(open) => !open && setEditingProperty(null)}>
                                     <DialogTrigger asChild>
                                         <Button variant="outline" size="sm" onClick={() => setEditingProperty(property)}>
                                             <Pencil className="h-4 w-4 mr-1" /> Edit
@@ -201,7 +201,7 @@ export default function ManagePropertiesView({ properties }: ViewProps) {
                                         </AlertDialogHeader>
                                         <AlertDialogFooter>
                                             <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                            <AlertDialogAction onClick={() => handleDelete(property.propertyId)} className="bg-red-600 hover:bg-red-700">
+                                            <AlertDialogAction onClick={() => handleDelete(property.id)} className="bg-red-600 hover:bg-red-700">
                                                 Delete
                                             </AlertDialogAction>
                                         </AlertDialogFooter>

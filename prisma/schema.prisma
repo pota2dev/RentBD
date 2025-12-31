@@ -1,6 +1,5 @@
 generator client {
   provider      = "prisma-client-js"
-  output        = "../node_modules/.prisma/client"
   binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
@@ -9,37 +8,19 @@ datasource db {
   url      = env("DIRECT_URL")
 }
 
-model Admin {
-  adminId     String  @id
-  userId      String  @unique
-  permissions String?
-  User        User    @relation(fields: [userId], references: [userId], onDelete: Cascade)
-}
-
-model AuthMethod {
-  authMethodId   String   @id
-  userId         String
-  type           AuthType
-  identifier     String
-  credentialData String?
-  isEnabled      Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  User           User     @relation(fields: [userId], references: [userId], onDelete: Cascade)
-}
-
 model Availability {
-  availabilityId String   @id
-  propertyId     String
-  startDate      DateTime @db.Date
-  endDate        DateTime @db.Date
-  isAvailable    Boolean  @default(true)
-  priceOverride  Decimal?
-  Property       Property @relation(fields: [propertyId], references: [propertyId], onDelete: Cascade)
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  propertyId    String   @db.Uuid
+  startDate     DateTime @db.Date
+  endDate       DateTime @db.Date
+  isAvailable   Boolean  @default(true)
+  priceOverride Decimal?
+  Property      Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
 }
 
 model Booking {
-  bookingId       String        @id
-  propertyId      String
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  propertyId      String        @db.Uuid
   tenantId        String
   checkInDate     DateTime      @db.Date
   checkOutDate    DateTime      @db.Date
@@ -49,52 +30,51 @@ model Booking {
   specialRequests String?
   requestedAt     DateTime      @default(now())
   respondedAt     DateTime?
-  Property        Property      @relation(fields: [propertyId], references: [propertyId])
-  Tenant          Tenant        @relation(fields: [tenantId], references: [tenantId])
+  Property        Property      @relation(fields: [propertyId], references: [id])
+  Tenant          Tenant        @relation(fields: [tenantId], references: [id])
   Message         Message[]
   Payment         Payment[]
   Review          Review?
 }
 
 model EmailLog {
-  emailLogId String   @id
-  userId     String?
-  type       String
-  recipient  String
-  subject    String?
-  body       String?
-  status     String?
-  sentAt     DateTime @default(now())
-  User       User?    @relation(fields: [userId], references: [userId])
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String?
+  type      String
+  recipient String
+  subject   String?
+  body      String?
+  status    String?
+  sentAt    DateTime @default(now())
+  User      User?    @relation(fields: [userId], references: [id])
 }
 
 model Landlord {
-  landlordId    String     @id
-  userId        String     @unique
+  id            String     @id
   bio           String?
   businessName  String?
   taxId         String?
   totalEarnings Float      @default(0.0)
   averageRating Float      @default(0.0)
-  User          User       @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  User          User       @relation(fields: [id], references: [id], onDelete: Cascade)
   Property      Property[]
 }
 
 model Message {
-  messageId                     String   @id
+  id                            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   senderId                      String
   receiverId                    String
-  bookingId                     String?
+  bookingId                     String?  @db.Uuid
   messageText                   String
   isRead                        Boolean  @default(false)
   sentAt                        DateTime @default(now())
-  Booking                       Booking? @relation(fields: [bookingId], references: [bookingId])
-  User_Message_receiverIdToUser User     @relation("Message_receiverIdToUser", fields: [receiverId], references: [userId])
-  User_Message_senderIdToUser   User     @relation("Message_senderIdToUser", fields: [senderId], references: [userId])
+  Booking                       Booking? @relation(fields: [bookingId], references: [id])
+  User_Message_receiverIdToUser User     @relation("Message_receiverIdToUser", fields: [receiverId], references: [id])
+  User_Message_senderIdToUser   User     @relation("Message_senderIdToUser", fields: [senderId], references: [id])
 }
 
 model Notification {
-  notificationId  String   @id
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId          String
   type            String
   title           String?
@@ -102,23 +82,23 @@ model Notification {
   isRead          Boolean  @default(false)
   relatedEntityId String?
   createdAt       DateTime @default(now())
-  User            User     @relation(fields: [userId], references: [userId])
+  User            User     @relation(fields: [userId], references: [id])
 }
 
 model Payment {
-  paymentId       String        @id
-  bookingId       String
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  bookingId       String        @db.Uuid
   amount          Decimal
   status          PaymentStatus @default(PENDING)
   method          String?
   transactionId   String?       @unique
   processedAt     DateTime?
   gatewayResponse String?
-  Booking         Booking       @relation(fields: [bookingId], references: [bookingId])
+  Booking         Booking       @relation(fields: [bookingId], references: [id])
 }
 
 model Property {
-  propertyId        String            @id
+  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   landlordId        String
   title             String
   description       String?
@@ -138,7 +118,7 @@ model Property {
   averageRating     Float             @default(0.0)
   totalReviews      Int               @default(0)
   createdAt         DateTime          @default(now())
-  updatedAt         DateTime
+  updatedAt         DateTime          @updatedAt
   balcony           Int               @default(0)
   district          String?
   division          String?
@@ -149,7 +129,7 @@ model Property {
   utilitiesIncluded String?
   Availability      Availability[]
   Booking           Booking[]
-  Landlord          Landlord          @relation(fields: [landlordId], references: [landlordId], onDelete: Cascade)
+  Landlord          Landlord          @relation(fields: [landlordId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   PropertyAmenity   PropertyAmenity[]
   PropertyImage     PropertyImage[]
   PropertyRule      PropertyRule[]
@@ -158,34 +138,34 @@ model Property {
 }
 
 model PropertyAmenity {
-  amenityId   String   @id
-  propertyId  String
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  propertyId  String   @db.Uuid
   amenityName String
   amenityType String?
-  Property    Property @relation(fields: [propertyId], references: [propertyId], onDelete: Cascade)
+  Property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
 }
 
 model PropertyImage {
-  imageId      String   @id
-  propertyId   String
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  propertyId   String   @db.Uuid
   imageUrl     String
   thumbnailUrl String?
   displayOrder Int?
   isPrimary    Boolean  @default(false)
   uploadedAt   DateTime @default(now())
-  Property     Property @relation(fields: [propertyId], references: [propertyId], onDelete: Cascade)
+  Property     Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
 }
 
 model PropertyRule {
-  ruleId     String   @id
-  propertyId String
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  propertyId String   @db.Uuid
   ruleText   String
   ruleType   String?
-  Property   Property @relation(fields: [propertyId], references: [propertyId], onDelete: Cascade)
+  Property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
 }
 
 model Report {
-  reportId    String     @id
+  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   reporterId  String
   type        ReportType
   targetId    String
@@ -193,36 +173,35 @@ model Report {
   description String?
   status      String     @default("PENDING")
   createdAt   DateTime   @default(now())
-  User        User       @relation(fields: [reporterId], references: [userId])
+  User        User       @relation(fields: [reporterId], references: [id])
 }
 
 model Review {
-  reviewId   String   @id
-  propertyId String
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  propertyId String   @db.Uuid
   tenantId   String
-  bookingId  String   @unique
+  bookingId  String   @unique @db.Uuid
   rating     Int
   reviewText String?
   createdAt  DateTime @default(now())
-  Booking    Booking  @relation(fields: [bookingId], references: [bookingId])
-  Property   Property @relation(fields: [propertyId], references: [propertyId])
-  Tenant     Tenant   @relation(fields: [tenantId], references: [tenantId])
+  Booking    Booking  @relation(fields: [bookingId], references: [id])
+  Property   Property @relation(fields: [propertyId], references: [id])
+  Tenant     Tenant   @relation(fields: [tenantId], references: [id])
 }
 
 model SavedProperty {
-  savedPropertyId String   @id
-  tenantId        String
-  propertyId      String
-  savedAt         DateTime @default(now())
-  Property        Property @relation(fields: [propertyId], references: [propertyId])
-  Tenant          Tenant   @relation(fields: [tenantId], references: [tenantId])
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId   String
+  propertyId String   @db.Uuid
+  savedAt    DateTime @default(now())
+  Property   Property @relation(fields: [propertyId], references: [id])
+  Tenant     Tenant   @relation(fields: [tenantId], references: [id])
 
   @@unique([tenantId, propertyId])
 }
 
 model Tenant {
-  tenantId                 String          @id
-  userId                   String          @unique
+  id                       String          @id
   bio                      String?
   occupation               String?
   numberOfPreviousBookings Int             @default(0)
@@ -230,11 +209,11 @@ model Tenant {
   Booking                  Booking[]
   Review                   Review[]
   SavedProperty            SavedProperty[]
-  User                     User            @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  User                     User            @relation(fields: [id], references: [id], onDelete: Cascade)
 }
 
 model User {
-  userId                           String             @id
+  id                               String             @id @default(uuid())
   supabaseAuthId                   String             @unique
   email                            String             @unique
   firstName                        String?
@@ -247,8 +226,6 @@ model User {
   isBanned                         Boolean            @default(false)
   createdAt                        DateTime           @default(now())
   lastLogin                        DateTime?
-  Admin                            Admin?
-  AuthMethod                       AuthMethod[]
   EmailLog                         EmailLog[]
   Landlord                         Landlord?
   Message_Message_receiverIdToUser Message[]          @relation("Message_receiverIdToUser")

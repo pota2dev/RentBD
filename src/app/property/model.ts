@@ -4,7 +4,7 @@ export async function getPropertyById(propertyId: string) {
   try {
     const property = await prisma.property.findUnique({
       where: {
-        propertyId: propertyId,
+        id: propertyId,
       },
         include: {
         Availability: true, 
