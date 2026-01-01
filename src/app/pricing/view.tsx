@@ -26,9 +26,10 @@ import { useRouter } from "next/navigation";
 
 interface PricingViewProps {
   isPro: boolean;
+  isAuthenticated: boolean;
 }
 
-export default function PricingView({ isPro }: PricingViewProps) {
+export default function PricingView({ isPro, isAuthenticated }: PricingViewProps) {
   const [loading, setLoading] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'paypal'>('card');
@@ -92,9 +93,11 @@ export default function PricingView({ isPro }: PricingViewProps) {
             </ul>
           </CardContent>
           <CardFooter>
-            <Button className="w-full" variant="outline" disabled>
-              Current Plan
-            </Button>
+            {isAuthenticated && (
+                <Button className="w-full" variant="outline" disabled>
+                  Current Plan
+                </Button>
+            )}
           </CardFooter>
         </Card>
 
@@ -135,91 +138,93 @@ export default function PricingView({ isPro }: PricingViewProps) {
             </ul>
           </CardContent>
           <CardFooter>
-            {isPro ? (
-              <Button 
-                onClick={async () => {
-                  setLoading(true);
-                  try {
-                    const res = await fetch("/pricing/api", { method: "DELETE" });
-                    if (res.ok) router.refresh();
-                  } catch (e) {
-                    console.error(e);
-                  } finally {
-                    setLoading(false);
-                  }
-                }} 
-                variant="destructive" 
-                className="w-full"
-                disabled={loading}
-              >
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Cancel Subscription
-              </Button>
-            ) : (
-              <Dialog open={showCheckout} onOpenChange={setShowCheckout}>
-                <DialogTrigger asChild>
-                  <Button className="w-full">Upgrade to Pro</Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px]">
-                  <DialogHeader>
-                    <DialogTitle>Upgrade to Pro</DialogTitle>
-                    <DialogDescription>
-                      Enter your payment details to simulate a purchase. No actual charge will be made.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="grid gap-4 py-4">
-                    <div className="flex items-center space-x-4 mb-4">
-                      <button 
-                        className={`flex-1 p-3 border rounded-md flex items-center justify-center transition-all ${paymentMethod === 'card' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:bg-muted'}`}
-                        onClick={() => setPaymentMethod('card')}
-                      >
-                        <span className="font-semibold">Credit Card</span>
-                      </button>
-                      <button 
-                        className={`flex-1 p-3 border rounded-md flex items-center justify-center transition-all ${paymentMethod === 'paypal' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:bg-muted'}`}
-                        onClick={() => setPaymentMethod('paypal')}
-                      >
-                        <span className="font-semibold text-blue-600">PayPal</span>
-                      </button>
-                    </div>
+            {isAuthenticated && (
+              isPro ? (
+                <Button 
+                  onClick={async () => {
+                    setLoading(true);
+                    try {
+                      const res = await fetch("/pricing/api", { method: "DELETE" });
+                      if (res.ok) router.refresh();
+                    } catch (e) {
+                      console.error(e);
+                    } finally {
+                      setLoading(false);
+                    }
+                  }} 
+                  variant="destructive" 
+                  className="w-full"
+                  disabled={loading}
+                >
+                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Cancel Subscription
+                </Button>
+              ) : (
+                <Dialog open={showCheckout} onOpenChange={setShowCheckout}>
+                  <DialogTrigger asChild>
+                    <Button className="w-full">Upgrade to Pro</Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                      <DialogTitle>Upgrade to Pro</DialogTitle>
+                      <DialogDescription>
+                        Enter your payment details to simulate a purchase. No actual charge will be made.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                      <div className="flex items-center space-x-4 mb-4">
+                        <button 
+                          className={`flex-1 p-3 border rounded-md flex items-center justify-center transition-all ${paymentMethod === 'card' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:bg-muted'}`}
+                          onClick={() => setPaymentMethod('card')}
+                        >
+                          <span className="font-semibold">Credit Card</span>
+                        </button>
+                        <button 
+                          className={`flex-1 p-3 border rounded-md flex items-center justify-center transition-all ${paymentMethod === 'paypal' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:bg-muted'}`}
+                          onClick={() => setPaymentMethod('paypal')}
+                        >
+                          <span className="font-semibold text-blue-600">PayPal</span>
+                        </button>
+                      </div>
 
-                    {paymentMethod === 'card' ? (
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="name">Cardholder Name</Label>
-                          <Input id="name" placeholder="John Doe" defaultValue="Test User" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="number">Card Number</Label>
-                          <Input id="number" placeholder="0000 0000 0000 0000" defaultValue="4242 4242 4242 4242" />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
+                      {paymentMethod === 'card' ? (
+                        <div className="space-y-4">
                           <div className="space-y-2">
-                            <Label htmlFor="expiry">Expiry</Label>
-                            <Input id="expiry" placeholder="MM/YY" defaultValue="12/30" />
+                            <Label htmlFor="name">Cardholder Name</Label>
+                            <Input id="name" placeholder="John Doe" defaultValue="Test User" />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="cvc">CVC</Label>
-                            <Input id="cvc" placeholder="123" defaultValue="123" />
+                            <Label htmlFor="number">Card Number</Label>
+                            <Input id="number" placeholder="0000 0000 0000 0000" defaultValue="4242 4242 4242 4242" />
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="expiry">Expiry</Label>
+                              <Input id="expiry" placeholder="MM/YY" defaultValue="12/30" />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="cvc">CVC</Label>
+                              <Input id="cvc" placeholder="123" defaultValue="123" />
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ) : (
-                      <div className="p-6 text-center border rounded-md bg-muted/50">
-                        <p className="text-sm text-muted-foreground">
-                          You will be redirected to PayPal to complete your purchase.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                  <DialogFooter>
-                    <Button type="submit" onClick={handleUpgrade} disabled={loading} className="w-full">
-                      {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      {paymentMethod === 'paypal' ? 'Pay with PayPal' : 'Pay Now ($9.99)'}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+                      ) : (
+                        <div className="p-6 text-center border rounded-md bg-muted/50">
+                          <p className="text-sm text-muted-foreground">
+                            You will be redirected to PayPal to complete your purchase.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                    <DialogFooter>
+                      <Button type="submit" onClick={handleUpgrade} disabled={loading} className="w-full">
+                        {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        {paymentMethod === 'paypal' ? 'Pay with PayPal' : 'Pay Now ($9.99)'}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              )
             )}
           </CardFooter>
         </Card>

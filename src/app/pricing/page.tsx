@@ -6,5 +6,5 @@ export default async function PricingPage() {
   const user = await currentUser();
   const isPro = user?.publicMetadata?.plan === "pro";
 
-  return <PricingView isPro={isPro} />;
+  return <PricingView isPro={isPro} isAuthenticated={!!user} />;
 }
