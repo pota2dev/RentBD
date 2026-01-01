@@ -22,7 +22,6 @@ export default async function ManagePropertiesPage() {
         );
     }
 
-    // Serialize data to pass to client component (handle Prisma Decimal)
     const serializedProperties = data.map(property => ({
         ...property,
         pricePerMonth: Number(property.pricePerMonth)

@@ -7,13 +7,11 @@ import {
     getOwnedProperties,
     getLandlordId
 } from '../../manage-properties/model';
-import { prisma } from '@/lib/prisma'; // Still needed for the default GET generic listing if not owner mode
+import { prisma } from '@/lib/prisma'; 
 
 export async function GET(req: NextRequest) {
     try {
         const { userId } = await auth();
-        // Allow public access for listing? If so, remove strict auth check for default mode.
-        // But for 'owner' mode, auth is required.
         
         const { searchParams } = new URL(req.url);
         const ownerMode = searchParams.get('mode') === 'owner';
@@ -29,10 +27,6 @@ export async function GET(req: NextRequest) {
              return NextResponse.json(data, { status });
         }
 
-        // Default: List all active properties (for browsing)
-        // Ideally this should be in src/app/property/model.ts as getAllProperties()
-        // For now, keeping it here is fine as it's a general query.
-        
         const properties = await prisma.property.findMany({
             orderBy: { createdAt: 'desc' },
             include: {
