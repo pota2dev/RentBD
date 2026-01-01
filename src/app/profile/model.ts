@@ -20,6 +20,8 @@ export interface ProfileData {
         bio: string | null;
         businessName: string | null;
     };
+    subscriptionPlan?: string;
+    imageUrl?: string;
 }
 
 
@@ -216,7 +218,12 @@ export const getProfileController = async () => {
             }
         }
 
-        return { data: user, status: 200 };
+        // Fetch Clerk user to get metadata (subscription plan)
+        const clerkUser = await currentUser();
+        const subscriptionPlan = (clerkUser?.publicMetadata?.plan as string) || 'free';
+        const imageUrl = clerkUser?.imageUrl;
+
+        return { data: { ...user, subscriptionPlan, imageUrl }, status: 200 };
     } catch (error) {
         console.error('Error fetching profile:', error);
         return { 

@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { useUser } from '@clerk/nextjs';
 import { ProfileData } from './model';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,16 +23,19 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Loader2, User, Building, UserCircle } from "lucide-react";
+import { Loader2, User, Building, UserCircle, Camera, Upload } from "lucide-react";
 
 interface ProfileViewProps {
     initialData?: ProfileData | null;
 }
 
 export default function ProfileView({ initialData }: ProfileViewProps) {
+    const { user } = useUser();
     const [profile, setProfile] = useState<ProfileData | null>(initialData || null);
     const [loading, setLoading] = useState(!initialData);
     const [saving, setSaving] = useState(false);
+    const [uploadingImage, setUploadingImage] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     
     // Derived state for the active role tab
     const [activeRole, setActiveRole] = useState<'TENANT' | 'LANDLORD'>('TENANT');
@@ -147,6 +151,27 @@ export default function ProfileView({ initialData }: ProfileViewProps) {
         }
     };
 
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (!user) {
+            alert("User not authenticated with Clerk");
+            return;
+        }
+
+        setUploadingImage(true);
+        try {
+            await user.setProfileImage({ file });
+            router.refresh(); // Refresh to update server-side data if needed, though useUser updates automatically
+        } catch (err) {
+            console.error("Error uploading image:", err);
+            alert("Failed to upload image. Please try again.");
+        } finally {
+            setUploadingImage(false);
+        }
+    };
+
     if (loading) {
         return (
             <div className="flex h-[50vh] items-center justify-center">
@@ -169,15 +194,40 @@ export default function ProfileView({ initialData }: ProfileViewProps) {
                         <CardTitle>Your Account</CardTitle>
                     </CardHeader>
                     <CardContent className="flex flex-col items-center text-center space-y-4">
-                        <Avatar className="h-24 w-24">
-                            <AvatarImage src="" /> {/* Add profile picture support later */}
-                            <AvatarFallback className="text-xl bg-primary/10 text-primary">{userInitials}</AvatarFallback>
-                        </Avatar>
+                        <div className="relative">
+                            <Avatar className="h-24 w-24 border-2 border-border">
+                                <AvatarImage src={user?.imageUrl || profile.imageUrl || ""} className="object-cover" />
+                                <AvatarFallback className="text-xl bg-primary/10 text-primary">{userInitials}</AvatarFallback>
+                            </Avatar>
+                            <Button
+                                size="icon"
+                                variant="secondary"
+                                className="absolute bottom-0 right-0 h-8 w-8 rounded-full shadow-md"
+                                onClick={() => fileInputRef.current?.click()}
+                                disabled={uploadingImage}
+                            >
+                                {uploadingImage ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                    <Camera className="h-4 w-4" />
+                                )}
+                            </Button>
+                            <input 
+                                type="file" 
+                                ref={fileInputRef} 
+                                className="hidden" 
+                                accept="image/*" 
+                                onChange={handleImageUpload} 
+                            />
+                        </div>
                         <div>
                             <p className="font-medium">{profile.firstName} {profile.lastName}</p>
                             <p className="text-sm text-muted-foreground">{profile.email}</p>
                             <div className="mt-2 inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80">
                                 {activeRole}
+                            </div>
+                            <div className="mt-2 ml-2 inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-primary/10 text-primary hover:bg-primary/20">
+                                {profile.subscriptionPlan?.toUpperCase() || 'FREE'}
                             </div>
                         </div>
                     </CardContent>
