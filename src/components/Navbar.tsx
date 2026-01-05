@@ -32,16 +32,28 @@ export function Navbar() {
           >
             Home
           </Link>
-          <Link
-            href="/manage-properties"
-            className={`text-sm font-medium transition-colors hover:text-primary ${
-              isActive("/manage-properties")
-                ? "text-foreground"
-                : "text-muted-foreground"
-            }`}
-          >
-            Properties
-          </Link>
+          <SignedIn>
+            <Link
+              href="/manage-properties"
+              className={`text-sm font-medium transition-colors hover:text-primary ${
+                isActive("/manage-properties")
+                  ? "text-foreground"
+                  : "text-muted-foreground"
+              }`}
+            >
+              My Properties
+            </Link>
+            <Link
+              href="/rent-history"
+              className={`text-sm font-medium transition-colors hover:text-primary ${
+                isActive("/rent-history")
+                  ? "text-foreground"
+                  : "text-muted-foreground"
+              }`}
+            >
+              Rent History
+            </Link>
+          </SignedIn>
           <Link
             href="/pricing"
             className={`text-sm font-medium transition-colors hover:text-primary ${
