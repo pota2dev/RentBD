@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
+import FileUpload01 from "@/components/file-upload-01";
 
 import { createClient } from '@/lib/supabase';
 
@@ -94,11 +95,10 @@ export default function PropertyForm({ initialData, onSuccess, mode = 'create' }
         }));
     };
     
-    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (!e.target.files || e.target.files.length === 0) return;
+    const handleFilesUpload = async (files: File[]) => {
+        if (files.length === 0) return;
         
         setUploading(true);
-        const files = Array.from(e.target.files);
         const supabase = createClient();
         const urls: string[] = [];
 
@@ -125,8 +125,6 @@ export default function PropertyForm({ initialData, onSuccess, mode = 'create' }
             }
             
             setUploadedImages(prev => [...prev, ...urls]);
-            // Also update form data if we want to submit it together, though payload construction uses uploadedImages?
-            // Let's update it in payload construction.
         } catch (err) {
             console.error(err);
              setError('Failed to upload images');
@@ -378,34 +376,13 @@ export default function PropertyForm({ initialData, onSuccess, mode = 'create' }
                     <div className="space-y-4">
                         <h3 className="text-lg font-medium">Property Images</h3>
                         <div className="space-y-2">
-                             <Label htmlFor="images">Upload Images</Label>
-                             <Input 
-                                id="images" 
-                                type="file" 
-                                multiple 
-                                accept="image/*" 
-                                onChange={handleImageUpload} 
-                                disabled={uploading}
+                             <Label>Upload Images</Label>
+                             <FileUpload01 
+                                images={uploadedImages}
+                                onUpload={handleFilesUpload}
+                                onRemove={(url) => setUploadedImages(prev => prev.filter(u => u !== url))}
+                                uploading={uploading}
                              />
-                             {uploading && <p className="text-sm text-gray-500">Uploading...</p>}
-                             {uploadedImages.length > 0 && (
-                                 <div className="flex gap-2 flex-wrap mt-2">
-                                     {uploadedImages.map((url, idx) => (
-                                         <div key={idx} className="relative w-20 h-20 border rounded overflow-hidden group">
-                                             <img src={url} alt="Uploaded" className="object-cover w-full h-full" />
-                                             <button
-                                                type="button"
-                                                onClick={() => {
-                                                    setUploadedImages(prev => prev.filter((_, i) => i !== idx));
-                                                }}
-                                                className="absolute top-0 right-0 bg-red-500 text-white rounded-bl p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                                             >
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                                             </button>
-                                         </div>
-                                     ))}
-                                 </div>
-                             )}
                         </div>
                     </div>
 

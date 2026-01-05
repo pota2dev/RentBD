@@ -218,9 +218,11 @@ export const getProfileController = async () => {
             }
         }
 
-        // Fetch Clerk user to get metadata (subscription plan)
+        // Fetch Clerk user to get image and check subscription using has() helper
         const clerkUser = await currentUser();
-        const subscriptionPlan = (clerkUser?.publicMetadata?.plan as string) || 'free';
+        const { has } = await auth();
+        const isPro = has ? has({ plan: "pro" }) : false;
+        const subscriptionPlan = isPro ? 'pro' : 'free';
         const imageUrl = clerkUser?.imageUrl;
 
         return { data: { ...user, subscriptionPlan, imageUrl }, status: 200 };

@@ -58,6 +58,8 @@ export async function createProperty(data: any, userId: string) {
                 city: data.city,
                 state: data.state,
                 zipCode: data.zipCode,
+                pricePerMonth: data.pricePerMonth,
+                area: data.area,
                 
                 division: data.division,
                 district: data.district,
@@ -141,6 +143,7 @@ export async function updateProperty(propertyId: string, data: any, userId: stri
                 city: updates.city,
                 state: updates.state,
                 zipCode: updates.zipCode,
+                pricePerMonth: updates.pricePerMonth,
                 
                 division: updates.division,
                 district: updates.district,
