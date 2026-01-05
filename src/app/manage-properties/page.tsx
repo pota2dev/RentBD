@@ -1,10 +1,11 @@
 import { getOwnedProperties } from './model';
-import ManagePropertiesView from './view';
+import { ManagePropertiesHeader, PropertyList } from './view';
 import { redirect } from 'next/navigation';
+import { Suspense } from 'react';
 
-export const dynamic = 'force-dynamic';
+// export const dynamic = 'force-dynamic';
 
-export default async function ManagePropertiesPage() {
+async function PropertiesContent() {
     const { data, error, status } = await getOwnedProperties();
 
     if (status === 401) {
@@ -27,6 +28,22 @@ export default async function ManagePropertiesPage() {
         pricePerMonth: Number(property.pricePerMonth)
     }));
 
+    return <PropertyList properties={serializedProperties} />;
+}
 
-    return <ManagePropertiesView properties={serializedProperties} />;
+export default function ManagePropertiesPage() {
+    return (
+        <div className="container mx-auto py-10">
+            <ManagePropertiesHeader />
+            <Suspense fallback={
+                <div className="flex h-[50vh] items-center justify-center">
+                    <div className="text-center">
+                        <p className="text-gray-500">Loading your properties...</p>
+                    </div>
+                </div>
+            }>
+                <PropertiesContent />
+            </Suspense>
+        </div>
+    );
 }
