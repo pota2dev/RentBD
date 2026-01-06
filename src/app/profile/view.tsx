@@ -226,9 +226,25 @@ export default function ProfileView({ initialData }: ProfileViewProps) {
                             <div className="mt-2 inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80">
                                 {activeRole}
                             </div>
-                            <div className="mt-2 ml-2 inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-primary/10 text-primary hover:bg-primary/20">
+                            <div className={`mt-2 ml-2 inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent ${
+                                profile.subscriptionPlan === 'pro' 
+                                    ? 'bg-primary text-primary-foreground' 
+                                    : 'bg-muted text-muted-foreground'
+                            }`}>
                                 {profile.subscriptionPlan?.toUpperCase() || 'FREE'}
                             </div>
+                            {profile.subscriptionPlan !== 'pro' && (
+                                <div className="mt-4">
+                                    <Button 
+                                        size="sm" 
+                                        variant="default"
+                                        onClick={() => router.push('/pricing')}
+                                        className="w-full"
+                                    >
+                                        Upgrade to Pro
+                                    </Button>
+                                </div>
+                            )}
                         </div>
                     </CardContent>
                 </Card>

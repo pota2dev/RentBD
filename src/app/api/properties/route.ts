@@ -4,8 +4,7 @@ import {
     createProperty, 
     updateProperty, 
     deleteProperty, 
-    getOwnedProperties,
-    getLandlordId
+    getOwnedProperties
 } from '../../manage-properties/model';
 import { prisma } from '@/lib/prisma'; 
 
