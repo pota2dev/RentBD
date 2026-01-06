@@ -4,7 +4,7 @@ import { Building2, Facebook, Instagram, Twitter } from 'lucide-react';
 export function Footer() {
   return (
     <footer className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 mt-auto">
-      <div className="container py-12 md:py-16 px-4">
+      <div className="container mx-auto py-12 md:py-16 px-4">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="space-y-4">
             <Link href="/" className="flex items-center space-x-2">

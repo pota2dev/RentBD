@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,6 +43,8 @@ interface PropertyData {
     thana: string;
     subArea: string;
     shortAddress: string;
+    latitude?: number;
+    longitude?: number;
     
     images?: string[]; // Define images here
 }
@@ -60,42 +62,45 @@ export default function PropertyForm({ initialData, onSuccess, mode = 'create' }
     const [uploadedImages, setUploadedImages] = useState<string[]>(initialData?.images || []);
     const [error, setError] = useState<string | null>(null);
 
-    const [formData, setFormData] = useState<PropertyData>(initialData || {
-        title: '',
-        description: '',
-        type: 'APARTMENT',
-        address: '', 
-        city: '', 
-        state: '', 
-        zipCode: '',
-        bedrooms: 1,
-        bathrooms: 1,
-        maxGuests: 0, 
+    const [formData, setFormData] = useState<PropertyData>({
+        id: initialData?.id,
+        title: initialData?.title || '',
+        description: initialData?.description || '',
+        type: initialData?.type || 'APARTMENT',
+        address: initialData?.address || '', 
+        city: initialData?.city || '', 
+        state: initialData?.state || '', 
+        zipCode: initialData?.zipCode || '',
+        bedrooms: initialData?.bedrooms || 1,
+        bathrooms: initialData?.bathrooms || 1,
+        maxGuests: initialData?.maxGuests || 0, 
         
-        area: 0,
-        pricePerMonth: 0,
-        balcony: 0,
-        floorNo: 1,
-        utilitiesIncluded: '',
-        division: '',
-        district: '',
-        thana: '',
-        subArea: '',
-        shortAddress: '',
-        images: []
+        area: initialData?.area || 0,
+        pricePerMonth: initialData?.pricePerMonth || 0,
+        balcony: initialData?.balcony || 0,
+        floorNo: initialData?.floorNo || 1,
+        utilitiesIncluded: initialData?.utilitiesIncluded || '',
+        division: initialData?.division || '',
+        district: initialData?.district || '',
+        thana: initialData?.thana || '',
+        subArea: initialData?.subArea || '',
+        shortAddress: initialData?.shortAddress || '',
+        latitude: initialData?.latitude || 0,
+        longitude: initialData?.longitude || 0,
+        images: initialData?.images || []
     });
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({
             ...prev,
-            [name]: ['pricePerMonth', 'bedrooms', 'bathrooms', 'balcony', 'floorNo', 'maxGuests', 'area'].includes(name)
+            [name]: ['pricePerMonth', 'bedrooms', 'bathrooms', 'balcony', 'floorNo', 'maxGuests', 'area', 'latitude', 'longitude'].includes(name)
                 ? Number(value)
                 : value
         }));
     };
     
-    const handleFilesUpload = async (files: File[]) => {
+    const handleFilesUpload = useCallback(async (files: File[]) => {
         if (files.length === 0) return;
         
         setUploading(true);
@@ -131,7 +136,7 @@ export default function PropertyForm({ initialData, onSuccess, mode = 'create' }
         } finally {
             setUploading(false);
         }
-    };
+    }, []);
 
 
     const handleSelectChange = (value: string) => {
@@ -340,6 +345,33 @@ export default function PropertyForm({ initialData, onSuccess, mode = 'create' }
                                 placeholder="Demo information"
                             />
                         </div>
+                        <div className="grid grid-cols-2 gap-4">
+                             <div className="space-y-2">
+                                <Label htmlFor="latitude">Latitude (Optional)</Label>
+                                <Input
+                                    id="latitude"
+                                    name="latitude"
+                                    type="number"
+                                    value={formData.latitude}
+                                    onChange={handleChange}
+                                    placeholder="23.8103"
+                                />
+                            </div>
+                             <div className="space-y-2">
+                                <Label htmlFor="longitude">Longitude (Optional)</Label>
+                                <Input
+                                    id="longitude"
+                                    name="longitude"
+                                    type="number"
+                                    value={formData.longitude}
+                                    onChange={handleChange}
+                                    placeholder="90.4125"
+                                />
+                            </div>
+                            <div className="col-span-2 text-xs text-muted-foreground">
+                                You can find coordinates from Google Maps (Right click {'>'} First option)
+                            </div>
+                        </div>
                     </div>
 
                     {/* Pricing */}
@@ -409,27 +441,4 @@ export default function PropertyForm({ initialData, onSuccess, mode = 'create' }
     );
 }
 
-// Update types
-interface PropertyData {
-    id?: string;
-    title: string;
-    description: string;
-    type: 'APARTMENT' | 'HOUSE' | 'CONDO' | 'STUDIO' | 'ROOM';
-    address: string;
-    city: string;
-    state: string;
-    zipCode: string;
-    bedrooms: number;
-    bathrooms: number;
-    maxGuests: number;
-    // New
-    pricePerMonth: number;
-    balcony: number;
-    floorNo: number;
-    utilitiesIncluded: string;
-    division: string;
-    district: string;
-    thana: string;
-    subArea: string;
-    shortAddress: string;
-}
+

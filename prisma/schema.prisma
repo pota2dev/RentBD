@@ -213,23 +213,13 @@ model Tenant {
 }
 
 model User {
-  id                               String             @id @default(uuid())
-  supabaseAuthId                   String             @unique
-  email                            String             @unique
-  firstName                        String?
-  lastName                         String?
-  phoneNumber                      String?
-  profilePicture                   String?
-  role                             UserRole           @default(TENANT)
-  verificationStatus               VerificationStatus @default(UNVERIFIED)
-  isActive                         Boolean            @default(true)
-  isBanned                         Boolean            @default(false)
-  createdAt                        DateTime           @default(now())
-  lastLogin                        DateTime?
+  id                               String         @id // This will be the Clerk ID
+  supabaseAuthId                   String         @unique
+  createdAt                        DateTime       @default(now())
   EmailLog                         EmailLog[]
   Landlord                         Landlord?
-  Message_Message_receiverIdToUser Message[]          @relation("Message_receiverIdToUser")
-  Message_Message_senderIdToUser   Message[]          @relation("Message_senderIdToUser")
+  Message_Message_receiverIdToUser Message[]      @relation("Message_receiverIdToUser")
+  Message_Message_senderIdToUser   Message[]      @relation("Message_senderIdToUser")
   Notification                     Notification[]
   Report                           Report[]
   Tenant                           Tenant?

@@ -13,6 +13,12 @@ import {
   Layers,
   Grid
 } from 'lucide-react';
+import dynamic from 'next/dynamic';
+
+const PropertyMap = dynamic(() => import('@/components/PropertyMap'), {
+  ssr: false,
+  loading: () => <div className="h-[400px] w-full bg-gray-100 rounded-lg animate-pulse" />
+});
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -145,62 +151,78 @@ export default function PropertyView({ property }: PropertyViewProps) {
                 <div><span className="font-semibold text-gray-700">Sub Area:</span> {subArea || 'N/A'}</div>
                 <div className="col-span-2"><span className="font-semibold text-gray-700">Short Address:</span> {shortAddress || address}</div>
              </div>
+             </div>
+
+          
+          {/* Map */}
+          {(typeof property.latitude === 'number' && typeof property.longitude === 'number' && property.latitude !== 0 && property.longitude !== 0) && (
+             <div className="py-2">
+                 <h2 className="text-xl font-semibold mb-4">Location on Map</h2>
+                 <PropertyMap 
+                    latitude={property.latitude} 
+                    longitude={property.longitude} 
+                    title={title}
+                 />
+             </div>
+          )}
+
+          <Separator />
+
+          {/* Reviews Section */}
+          <div id="reviews">
+              <h2 className="text-xl font-semibold mb-6 flex items-center">
+                  {totalReviews > 0 ? (
+                      <>
+                        <Star className="h-5 w-5 text-gray-900 fill-current mr-2" />
+                        {averageRating?.toFixed(2)} · {totalReviews} reviews
+                      </>
+                  ) : (
+                      "No reviews (yet)"
+                  )}
+              </h2>
+
+              {Review && Review.length > 0 ? (
+                  <div className="space-y-8">
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                         {Review.slice(0, 6).map((review: any) => (
+                             <div key={review.id} className="space-y-3">
+                                 <div className="flex items-center gap-3">
+                                     <Avatar className="h-10 w-10">
+                                         <AvatarImage src={review.Tenant.User.profilePicture} />
+                                         <AvatarFallback>{review.Tenant.User.firstName?.[0]}</AvatarFallback>
+                                     </Avatar>
+                                     <div>
+                                         <h4 className="font-semibold text-gray-900">{review.Tenant.User.firstName}</h4>
+                                         <p className="text-sm text-gray-500">{new Date(review.createdAt).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</p>
+                                     </div>
+                                 </div>
+                                 <p className="text-gray-700 leading-relaxed text-sm">
+                                     {review.reviewText || "No comment."}
+                                 </p>
+                             </div>
+                         ))}
+                     </div>
+                     
+                     {totalReviews > 5 && (
+                         <Button variant="outline" className="mt-4 border-black text-black hover:bg-gray-50 px-6 py-5 rounded-lg font-semibold" asChild>
+                             <a href={`/reviews?id=${property.id}`}>
+                                 Show all {totalReviews} reviews
+                             </a>
+                         </Button>
+                     )}
+                  </div>
+              ) : (
+                  <div className="text-gray-500">
+                      This property has no reviews.
+                  </div>
+              )}
           </div>
 
           <Separator />
-          
-          {/* Description */}
-          <div>
-            <h2 className="text-xl font-semibold mb-4">Summary</h2>
-            <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{description || "No summary provided."}</p>
-          </div>
-
-          <Separator />
-          
-          {/* Utilities */}
-          {utilitiesIncluded && (
-              <div>
-                  <h2 className="text-xl font-semibold mb-2">Price included with</h2>
-                  <div className="flex flex-wrap gap-2">
-                      {utilitiesIncluded.split(',').map((item: string, idx: number) => (
-                          <span key={idx} className="bg-green-50 text-green-700 px-3 py-1 rounded-full text-sm font-medium border border-green-100">
-                             {item.trim()}
-                          </span>
-                      ))}
-                  </div>
-              </div>
-          )}
-
-          {/* Amenities */}
-          <div>
-            <h2 className="text-xl font-semibold mb-4">What this place offers</h2>
-            <div className="grid grid-cols-2 gap-4">
-              {PropertyAmenity?.map((amenity: any) => (
-                <div key={amenity.amenityId} className="flex items-center gap-2 text-gray-700">
-                  <div className="h-8 w-8 rounded-full bg-gray-50 flex items-center justify-center">
-                    {amenity.amenityName.toLowerCase().includes('wifi') ? <Wifi className="h-4 w-4" /> :
-                     <Star className="h-4 w-4" />}
-                  </div>
-                  <span>{amenity.amenityName}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Reviews Preview (Legacy) */}
-          {Review && Review.length > 0 && (
-              <div>
-                  <h2 className="text-xl font-semibold mb-4 flex items-center">
-                      <Star className="h-5 w-5 text-yellow-500 mr-1 fill-current" />
-                      {averageRating.toFixed(1)} · {totalReviews} Reviews
-                  </h2>
-                 {/* ... review mapping same as before ... */}
-              </div>
-          )}
 
           {/* Landlord Info */}
           {Landlord && (
-             <div className="border-t pt-8">
+             <div>
                <h2 className="text-xl font-semibold mb-4">Property Owner</h2>
                 <div className="flex items-start gap-4">
                   <Avatar className="h-12 w-12">

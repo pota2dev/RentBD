@@ -1,3 +1,5 @@
+import { auth } from "@clerk/nextjs/server";
+import { prisma } from "@/lib/prisma";
 import { getPropertyReviews } from "./model";
 import ReviewsView from "./view";
 
@@ -20,6 +22,16 @@ export default async function ReviewsPage({ searchParams }: PageProps) {
     );
   }
 
+  const { userId } = await auth();
+
+  // Fetch property to check ownership
+  const property = await prisma.property.findUnique({
+      where: { id: propertyId },
+      select: { landlordId: true }
+  });
+
+  const isOwner = userId && property ? userId === property.landlordId : false;
+
   // Fetch initial reviews on the server
   const reviews = await getPropertyReviews(propertyId);
   const serializedReviews = JSON.parse(JSON.stringify(reviews));
@@ -30,6 +42,8 @@ export default async function ReviewsPage({ searchParams }: PageProps) {
       <ReviewsView 
         propertyId={propertyId} 
         initialReviews={serializedReviews} 
+        currentUserId={userId || undefined}
+        isOwner={isOwner}
       />
     </div>
   );
